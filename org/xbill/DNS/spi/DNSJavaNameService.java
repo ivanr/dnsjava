@@ -89,7 +89,6 @@ DNSJavaNameService() {
 
 public Object
 invoke(Object proxy, Method method, Object[] args) throws Throwable {
-	try {
 		if (method.getName().equals("getHostByAddr")) {
 			return this.getHostByAddr((byte[]) args[0]);
 		} else if (method.getName().equals("lookupAllHostAddr")) {
@@ -111,11 +110,6 @@ invoke(Object proxy, Method method, Object[] args) throws Throwable {
 				return byteAddresses;
 			}
 		}		
-	} catch (Throwable e) {
-		System.err.println("DNSJavaNameService: Unexpected error.");
-		e.printStackTrace();
-		throw e;
-	}
 	throw new IllegalArgumentException(
 					"Unknown function name or arguments.");
 }
