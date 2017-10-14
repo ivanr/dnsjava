@@ -2,10 +2,14 @@
 
 package org.xbill.DNS;
 
-import java.io.*;
-import java.net.*;
-import java.nio.channels.*;
 import org.xbill.DNS.utils.hexdump;
+
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 
 class Client {
 
@@ -58,7 +62,7 @@ verboseLog(String prefix, SocketAddress local, SocketAddress remote,
 		packetLogger.log(prefix, local, remote, data);
 }
 
-void
+public void
 cleanup() throws IOException {
 	key.selector().close();
 	key.channel().close();

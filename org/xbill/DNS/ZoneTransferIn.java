@@ -345,7 +345,9 @@ setLocalAddress(SocketAddress addr) {
 private void
 openConnection() throws IOException {
 	long endTime = System.currentTimeMillis() + timeout;
-	client = new TCPClient(endTime);
+	if (client == null) {
+		client = new TCPClientImpl(endTime);
+	}
 	if (localAddress != null)
 		client.bind(localAddress);
 	client.connect(address);
@@ -673,6 +675,10 @@ public boolean
 isCurrent() {
 	BasicHandler handler = getBasicHandler();
 	return (handler.axfr == null && handler.ixfr == null);
+}
+
+public void setTCPClient(TCPClient client) {
+	this.client = client;
 }
 
 }
