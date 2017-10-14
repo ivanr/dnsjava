@@ -250,12 +250,12 @@ send(Message query) throws IOException {
 
 		if (useTCP || out.length > udpSize)
 			tcp = true;
-		if (tcp)
-			in = TCPClient.sendrecv(localAddress, address, out,
-						endTime);
-		else
-			in = UDPClient.sendrecv(localAddress, address, out,
-						udpSize, endTime);
+
+		if (tcp) {
+			in = getNetworkClient().sendrecvTCP(localAddress, address, out, endTime);
+		} else {
+			in = getNetworkClient().sendrecvUDP(localAddress, address, out, udpSize, endTime);
+		}
 
 		/*
 		 * Check that the response is long enough.
@@ -346,6 +346,20 @@ sendAXFR(Message query) throws IOException {
 	while (it.hasNext())
 		response.addRecord((Record)it.next(), Section.ANSWER);
 	return response;
+}
+
+private NetworkClient networkClient;
+
+public void setNetworkClient(NetworkClient networkClient) {
+	this.networkClient = networkClient;
+}
+
+private NetworkClient getNetworkClient() {
+	if (networkClient == null) {
+		networkClient = NetworkClientFactory.getDefault();
+	}
+
+	return networkClient;
 }
 
 }
