@@ -26,34 +26,46 @@ private interface Element {
 }
 
 private static int
-limitExpire(long ttl, long maxttl) {
+determineExpire(long ttl, long minttl, long maxttl) {
 	if (maxttl >= 0 && maxttl < ttl)
 		ttl = maxttl;
+
+	if (minttl != -1) {
+		if (minttl == 0) {
+			return Integer.MAX_VALUE;
+		} else {
+			if (minttl > ttl) {
+				ttl = minttl;
+			}
+		}
+	}
+
 	long expire = (System.currentTimeMillis() / 1000) + ttl;
 	if (expire < 0 || expire > Integer.MAX_VALUE)
 		return Integer.MAX_VALUE;
+
 	return (int)expire;
 }
 
 private static class CacheRRset extends RRset implements Element {
 	private static final long serialVersionUID = 5971755205903597024L;
-	
+
 	int credibility;
 	int expire;
 
 	public
-	CacheRRset(Record rec, int cred, long maxttl) {
+	CacheRRset(Record rec, int cred, long minttl, long maxttl) {
 		super();
 		this.credibility = cred;
-		this.expire = limitExpire(rec.getTTL(), maxttl);
+		this.expire = determineExpire(rec.getTTL(), minttl, maxttl);
 		addRR(rec);
 	}
 
 	public
-	CacheRRset(RRset rrset, int cred, long maxttl) {
+	CacheRRset(RRset rrset, int cred, long minttl, long maxttl) {
 		super(rrset);
 		this.credibility = cred;
-		this.expire = limitExpire(rrset.getTTL(), maxttl);
+		this.expire = determineExpire(rrset.getTTL(), minttl, maxttl);
 	}
 
 	public final boolean
@@ -85,7 +97,7 @@ private static class NegativeElement implements Element {
 
 	public
 	NegativeElement(Name name, int type, SOARecord soa, int cred,
-			long maxttl)
+			long minttl, long maxttl)
 	{
 		this.name = name;
 		this.type = type;
@@ -93,7 +105,7 @@ private static class NegativeElement implements Element {
 		if (soa != null)
 			cttl = soa.getMinimum();
 		this.credibility = cred;
-		this.expire = limitExpire(cttl, maxttl);
+		this.expire = determineExpire(cttl, minttl, maxttl);
 	}
 
 	public int
@@ -156,6 +168,7 @@ private static class CacheMap extends LinkedHashMap {
 private CacheMap data;
 private int maxncache = -1;
 private int maxcache = -1;
+private int mincache = -1;
 private int dclass;
 
 private static final int defaultMaxEntries = 50000;
@@ -237,6 +250,7 @@ oneElement(Name name, Object types, int type, int minCred) {
 	}
 	if (found == null)
 		return null;
+
 	if (found.expired()) {
 		removeElement(name, type);
 		return null;
@@ -331,7 +345,7 @@ addRecord(Record r, int cred, Object o) {
 		return;
 	Element element = findElement(name, type, cred);
 	if (element == null) {
-		CacheRRset crrset = new CacheRRset(r, cred, maxcache);
+		CacheRRset crrset = new CacheRRset(r, cred, mincache, maxcache);
 		addRRset(crrset, cred);
 	} else if (element.compareCredibility(cred) == 0) {
 		if (element instanceof CacheRRset) {
@@ -364,7 +378,7 @@ addRRset(RRset rrset, int cred) {
 			if (rrset instanceof CacheRRset)
 				crrset = (CacheRRset) rrset;
 			else
-				crrset = new CacheRRset(rrset, cred, maxcache);
+				crrset = new CacheRRset(rrset, cred, mincache, maxcache);
 			addElement(name, crrset);
 		}
 	}
@@ -393,7 +407,7 @@ addNegative(Name name, int type, SOARecord soa, int cred) {
 		if (element == null)
 			addElement(name, new NegativeElement(name, type,
 							     soa, cred,
-							     maxncache));
+							     mincache, maxncache));
 	}
 }
 
@@ -772,6 +786,21 @@ setMaxCache(int seconds) {
 }
 
 /**
+ * Sets the minimum length of time that records will be stored in this
+ * cache.  A negative value disables this feature (that is, sets no
+ * minimum time.  If mincache is set to zero, records will be stored in
+ * the cache indefinitely.
+ */
+public void
+setMinCache(int seconds) {
+	if (mincache < -1) {
+		throw new IllegalArgumentException();
+	}
+
+	mincache = seconds;
+}
+
+/**
  * Gets the maximum length of time that records will be stored
  * in this Cache.  A negative value indicates no limit.
  */
@@ -826,7 +855,7 @@ getDClass() {
 
 /**
  * Returns the contents of the Cache as a string.
- */ 
+ */
 public String
 toString() {
 	StringBuffer sb = new StringBuffer();
