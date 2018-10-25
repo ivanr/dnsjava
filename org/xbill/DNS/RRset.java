@@ -90,7 +90,12 @@ addRR(Record r) {
 		}
 	}
 
-	if (!rrs.contains(r))
+	// It seems that, because of this check, dnsjava doesn't return all
+	// records seen on the wire, which is confusing. For our purposes
+	// (diagnostics), we prefer to see all records, even when they're
+	// identical. dnsjava probably follows the advice from:
+	//     https://tools.ietf.org/html/rfc2181#section-5
+	//if (!rrs.contains(r))
 		safeAddRR(r);
 }
 
